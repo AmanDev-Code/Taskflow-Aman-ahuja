@@ -1,0 +1,7 @@
+-- migrate:up
+ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS color VARCHAR(20) DEFAULT '#6366f1';
+
+-- migrate:down
+ALTER TABLE users DROP COLUMN IF EXISTS color;
+ALTER TABLE users DROP COLUMN IF EXISTS avatar_url;

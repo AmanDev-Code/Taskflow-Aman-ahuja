@@ -1,0 +1,364 @@
+Everything below:
+
+✅ Follows assignment strictly
+✅ Uses NestJS + Fastify
+✅ Uses React + Zustand + React Query
+✅ Includes Zomato-level UX thinking
+✅ Includes Docker, migrations, seed, API correctness
+✅ Includes Cursor prompt (VERY IMPORTANT)
+❗ Nothing is skipped
+🚀 0. CORE PRINCIPLE (READ THIS FIRST)
+
+You are building:
+
+❌ NOT a CRUD app
+✅ A production-quality mini SaaS product
+
+That means:
+
+Every API → predictable
+Every UI → intentional
+Every state → handled
+Every error → visible
+🧠 1. ARCHITECTURE (FINAL DECISION)
+🧩 Monorepo (MANDATORY)
+taskflow-aman/
+
+├── backend/        # NestJS + Fastify
+├── frontend/       # React + TS
+├── docker-compose.yml
+├── .env.example
+├── README.md
+⚙️ 2. BACKEND — NESTJS + FASTIFY (DETAILED)
+🧱 Setup Command
+nest new backend
+cd backend
+
+npm install @nestjs/platform-fastify fastify
+npm install @nestjs/jwt passport-jwt bcrypt
+npm install class-validator class-transformer
+npm install pg
+🔥 Enable Fastify
+// main.ts
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule, new FastifyAdapter());
+
+  app.enableCors();
+  app.setGlobalPrefix('api');
+
+  await app.listen(3001);
+}
+🧩 Folder Structure (STRICT)
+src/
+├── modules/
+│   ├── auth/
+│   ├── users/
+│   ├── projects/
+│   ├── tasks/
+│
+├── common/
+│   ├── guards/
+│   ├── filters/
+│   ├── interceptors/
+│   ├── decorators/
+│
+├── database/
+│   ├── migrations/
+│
+├── config/
+🗄️ 3. DATABASE DESIGN (STRICT + EXTENDED)
+USERS
+id UUID PRIMARY KEY
+name TEXT NOT NULL
+email TEXT UNIQUE NOT NULL
+password TEXT NOT NULL
+created_at TIMESTAMP
+PROJECTS
+id UUID PRIMARY KEY
+name TEXT NOT NULL
+description TEXT
+owner_id UUID REFERENCES users(id)
+created_at TIMESTAMP
+TASKS
+id UUID PRIMARY KEY
+title TEXT NOT NULL
+description TEXT
+status TEXT CHECK (status IN ('todo','in_progress','done'))
+priority TEXT CHECK (priority IN ('low','medium','high'))
+project_id UUID REFERENCES projects(id)
+assignee_id UUID REFERENCES users(id)
+created_by UUID NOT NULL
+due_date DATE
+created_at TIMESTAMP
+updated_at TIMESTAMP
+⚡ INDEXES
+CREATE INDEX idx_tasks_project ON tasks(project_id);
+CREATE INDEX idx_tasks_assignee ON tasks(assignee_id);
+CREATE INDEX idx_tasks_status ON tasks(status);
+🔄 4. MIGRATIONS (VERY IMPORTANT)
+TOOL
+
+👉 Use: dbmate
+
+Commands
+dbmate new create_users_table
+dbmate up
+RULES (MANDATORY)
+Every migration:
+up.sql
+down.sql
+NO ORM auto sync ❌
+🌱 5. SEED DATA (MANDATORY)
+MUST INCLUDE
+User:
+email: test@example.com
+password: password123
+HOW
+Create seed.sql
+Run on container start OR script
+🔐 6. AUTH SYSTEM (DETAILED)
+FLOW
+Register
+Hash password (bcrypt 12)
+Login
+Issue JWT
+JWT PAYLOAD
+{
+  "user_id": "uuid",
+  "email": "test@example.com",
+  "exp": 24h
+}
+GUARD
+@Injectable()
+export class JwtAuthGuard extends AuthGuard('jwt') {}
+EDGE CASES
+Case	Response
+Wrong password	401
+No token	401
+Forbidden access	403
+⚙️ 7. API DESIGN (STRICT COMPLIANCE)
+🔥 RESPONSE FORMAT
+Success
+{
+  "data": {},
+  "message": "success"
+}
+Validation Error
+{
+  "error": "validation failed",
+  "fields": {
+    "email": "is required"
+  }
+}
+
+(MUST match spec)
+
+🧩 PROJECT APIs
+GET    /projects
+POST   /projects
+GET    /projects/:id
+PATCH  /projects/:id
+DELETE /projects/:id
+🧩 TASK APIs
+GET    /projects/:id/tasks?status=&assignee=
+POST   /projects/:id/tasks
+PATCH  /tasks/:id
+DELETE /tasks/:id
+🔥 PERMISSION RULES
+Only owner → update/delete project
+Task delete:
+creator OR project owner
+🎨 8. FRONTEND (ZOMATO-LEVEL UX)
+STACK
+React + TypeScript
+Zustand
+React Query
+Tailwind
+shadcn/ui
+🎨 DESIGN SYSTEM
+Colors
+Primary: #E23744
+Green: #22C55E
+Gray: #F8F9FA
+Text: #1F2937
+🧩 COMPONENT SYSTEM
+components/
+├── Button.tsx
+├── Input.tsx
+├── Modal.tsx
+├── Card.tsx
+├── TaskCard.tsx
+├── ProjectCard.tsx
+├── Loader.tsx
+├── EmptyState.tsx
+🧭 9. UX FLOWS (VERY DETAILED)
+🔐 AUTH
+Instant validation
+Error under input
+Submit loading state
+📁 PROJECT LIST
+Grid layout
+Floating “+ Project” button
+Empty state illustration
+📊 PROJECT DETAIL (KANBAN)
+
+Columns:
+
+Todo
+In Progress
+Done
+🔥 DRAG & DROP
+
+Use:
+
+dnd-kit
+⚡ MICRO INTERACTIONS
+Hover → shadow
+Drag → scale + smooth
+Success → toast
+⚡ 10. STATE MANAGEMENT
+Zustand
+authStore = {
+  user,
+  token,
+  login(),
+  logout()
+}
+React Query
+useProjects
+useTasks
+🔁 OPTIMISTIC UPDATE
+onMutate → update UI
+onError → rollback
+🐳 11. DOCKER (LIGHTWEIGHT + PERFECT)
+docker-compose.yml
+version: "3.9"
+
+services:
+  db:
+    image: postgres:15-alpine
+    env_file: .env
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+🧠 BACKEND DOCKERFILE
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+COPY . .
+RUN npm install
+RUN npm run build
+
+FROM node:20-alpine
+
+WORKDIR /app
+COPY --from=builder /app/dist ./dist
+COPY package.json .
+
+RUN npm install --only=production
+
+CMD ["node", "dist/main.js"]
+📘 12. README (STRICT STRUCTURE)
+MUST INCLUDE (FROM TASK)
+Overview
+Architecture
+Run steps
+Migrations
+Test credentials
+API reference
+Improvements
+🌟 13. ADDITIONAL FEATURES (YOUR EDGE)
+🔥 MUST ADD
+1. Kanban Drag & Drop
+2. Dark Mode (persist localStorage)
+3. Stats Dashboard
+4. SSE Real-time updates
+💡 NICE ADD
+Activity logs
+Task comments
+Due date reminders
+🤖 14. CURSOR PROMPT (VERY IMPORTANT)
+
+Use this EXACT prompt:
+
+Writing
+
+You are a senior full-stack engineer.
+
+Build a production-grade TaskFlow application using:
+
+Backend:
+
+NestJS with Fastify
+PostgreSQL (no ORM auto sync)
+dbmate for migrations
+JWT auth (24h expiry)
+bcrypt hashing (cost >= 12)
+
+Frontend:
+
+React + TypeScript
+Zustand for auth state
+React Query for server state
+Tailwind + shadcn UI
+
+STRICT REQUIREMENTS:
+
+Follow REST API exactly as defined
+Use structured error responses:
+{ "error": "...", "fields": {...} }
+All endpoints require JWT except auth
+Use optimistic UI updates
+Implement Kanban board with drag-and-drop
+
+DOCKER:
+
+Multi-stage builds
+Use alpine images
+docker-compose must run entire stack
+
+DATABASE:
+
+Must use migrations (up/down)
+Include seed data:
+email: test@example.com
+password: password123
+
+UI/UX:
+
+Clean, minimal, Zomato-level polish
+Responsive (mobile + desktop)
+No blank states
+Proper loading and error states
+
+DO NOT:
+
+Skip validation
+Skip edge cases
+Hardcode secrets
+
+Focus on:
+
+Clean architecture
+Maintainability
+Production-level code quality
+✅ FINAL CHECKLIST (SUBMISSION)
+
+Before submit:
+
+✅ docker compose up works
+✅ JWT secure
+✅ migrations present
+✅ seed working
+✅ no console errors
+✅ responsive UI
+✅ README complete
